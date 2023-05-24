@@ -33,3 +33,4 @@ jobs:
                   key: ${{ secrets.SSH_KEY }}
                   source: ./front/build/*
                   target: /var/www/html/random/front/
+                  strip_components: 2
