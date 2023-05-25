@@ -26,6 +26,7 @@ jobs:
               run: |
                   npm ci
                   npm run build --if-present
+
             - name: Secure copy to the droplet
               uses: appleboy/scp-action@v0.1.4
               with:
