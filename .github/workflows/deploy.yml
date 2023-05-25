@@ -43,47 +43,9 @@ jobs:
 
         steps:
             - uses: actions/checkout@v3
+            # TODO: Se connecter au serveur par ssh, faire un git pull, composer install, php artisan migrate
+            # TODO: setup le .env sur le serveur
 
-            # Setup NodeJS and PHP
-            - name: Setup Node.js
-              uses: actions/setup-node@v3
-              with:
-                  node-version: 19
-                  cache: 'npm'
-                  cache-dependency-path: ./back/package-lock.json
-            - name: Setup PHP
-              uses: shivammathur/setup-php@2.25.1
-              with:
-                  php-version: '8.2'
-                  extensions: ctype, curl, dom, fileinfo, filter, hash, mbstring, openssl, pcre, pdo, session, tokenizer, xml
-
-            # Bundle assets with Node
-            - name: Install NodeJS dependencies
-              working-directory: ./back
-              run: npm ci
-            - name: Bundle assets
-              working-directory: ./back
-              run: |
-                  npm run build --if-present
-                  rm -rf node_modules
-
-            # Prepare Laravel
-            - name: Install PHP dependencies
-              uses: ramsey/composer-install@2.2.0
-              with:
-                  working-directory: ./back
-            - name: Optimize the caches
-              working-directory: ./back
-              run: |
-                  php artisan clear-compiled
-                  php artisan config:cache
-                  php artisan route:cache
-                  php artisan view:cache
-            - name: Remove vendors
-              working-directory: ./back
-              run: rm -rf vendor
-
-            # Setup backend in the droplet
             - name: Secure copy to the droplet
               uses: appleboy/scp-action@v0.1.4
               with:
@@ -103,8 +65,5 @@ jobs:
                   key: ${{ secrets.SSH_KEY }}
                   script: |
                       cd /var/www/html/random/back
-                      composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
-
-            # Migrate the database
-            # - name: Migrate the database
-            #   run: php artisan migrate --force
+                      composer install
+                      php artisan migrate --force
