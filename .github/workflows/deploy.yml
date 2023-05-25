@@ -6,6 +6,8 @@ name: Droplet deploy
 on:
     push:
         branches: ['main']
+    pull_request:
+        branches: ['main']
 
 jobs:
     build-front:
@@ -24,7 +26,7 @@ jobs:
               run: |
                   npm ci
                   npm run build --if-present
-            - name: Secure copy to the Droplet
+            - name: Secure copy to the droplet
               uses: appleboy/scp-action@v0.1.4
               with:
                   host: ${{ secrets.SSH_HOST }}
@@ -40,12 +42,54 @@ jobs:
 
         steps:
             - uses: actions/checkout@v3
+
+            # Setup NodeJS and PHP
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: 19
+                  cache: 'npm'
+                  cache-dependency-path: ./back/package-lock.json
             - name: Setup PHP
               uses: shivammathur/setup-php@2.25.1
               with:
                   php-version: '8.2'
                   extensions: ctype, curl, dom, fileinfo, filter, hash, mbstring, openssl, pcre, pdo, session, tokenizer, xml
-            - name: Install dependencies
+
+            # Bundle assets with Node
+            - name: Install NodeJS dependencies
+              working-directory: ./back
+              run: npm ci
+            - name: Bundle assets
+              working-directory: ./back
+              run: |
+                  npm run build --if-present
+                  rm -rf node_modules
+
+            # Prepare Laravel
+            - name: Install PHP dependencies
               uses: ramsey/composer-install@2.2.0
-            - name: Build backend
-              run:
+              with:
+                  composer-options: '--no-dev --prefer-dist --optimize-autoloader'
+            - name: Optimize the caches
+              run: |
+                  php artisan clear-compiled
+                  php artisan config:cache
+                  php artisan route:cache
+                  php artisan view:cache
+
+            # Copy files to the droplet
+            - name: Secure copy to the droplet
+              uses: appleboy/scp-action@v0.1.4
+              with:
+                  host: ${{ secrets.SSH_HOST }}
+                  username: ${{ secrets.SSH_USER }}
+                  port: ${{ secrets.SSH_PORT }}
+                  key: ${{ secrets.SSH_KEY }}
+                  source: ./back/*
+                  target: /var/www/html/random/back/
+                  strip_components: 1
+
+            # Migrate the database
+            - name: Migrate the database
+              run: php artisan migrate --force
