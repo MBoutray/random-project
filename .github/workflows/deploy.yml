@@ -73,6 +73,7 @@ jobs:
               with:
                   working-directory: ./back
             - name: Optimize the caches
+              working-directory: ./back
               run: |
                   php artisan clear-compiled
                   php artisan config:cache
