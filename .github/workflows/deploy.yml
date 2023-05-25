@@ -70,6 +70,7 @@ jobs:
             - name: Install PHP dependencies
               uses: ramsey/composer-install@2.2.0
               with:
+                  working-directory: ./back
                   composer-options: '--no-dev --prefer-dist --optimize-autoloader'
             - name: Optimize the caches
               run: |
