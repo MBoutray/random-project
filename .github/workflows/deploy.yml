@@ -72,15 +72,17 @@ jobs:
               uses: ramsey/composer-install@2.2.0
               with:
                   working-directory: ./back
-                  composer-options: '--no-dev --prefer-dist --optimize-autoloader'
             - name: Optimize the caches
               run: |
                   php artisan clear-compiled
                   php artisan config:cache
                   php artisan route:cache
                   php artisan view:cache
+            - name: Remove vendors
+              working-directory: ./back
+              run: rm -rf vendor
 
-            # Copy files to the droplet
+            # Setup backend in the droplet
             - name: Secure copy to the droplet
               uses: appleboy/scp-action@v0.1.4
               with:
@@ -91,7 +93,17 @@ jobs:
                   source: ./back/*
                   target: /var/www/html/random/back/
                   strip_components: 1
+            - name: Install dependencies in the droplet
+              uses: appleboy/ssh-action@master
+              with:
+                  host: ${{ secrets.SSH_HOST }}
+                  username: ${{ secrets.SSH_USER }}
+                  port: ${{ secrets.SSH_PORT }}
+                  key: ${{ secrets.SSH_KEY }}
+                  script: |
+                      cd /var/www/html/random/back
+                      composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
 
             # Migrate the database
-            - name: Migrate the database
-              run: php artisan migrate --force
+            # - name: Migrate the database
+            #   run: php artisan migrate --force
